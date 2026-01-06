@@ -1,53 +1,83 @@
 package com.example.jongbum.service;
 
-import com.example.jongbum.model.Todo;
-import com.example.jongbum.repository.TodoInMemoryRepository;
+import com.example.jongbum.dto.TodoRequestDto;
+import com.example.jongbum.dto.TodoResponseDto;
+import com.example.jongbum.entity.Todo;
+import com.example.jongbum.repository.TodoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Testcontainers
+@ExtendWith(SpringExtension.class)
 @SpringBootTest
 public class TodoServiceTests {
+    @Container
+    public static MySQLContainer<?> mysqlContainer =
+            new MySQLContainer<>("mysql:8.0.32")
+                    .withDatabaseName("testdb")
+                    .withUsername("test")
+                    .withPassword("test");
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", mysqlContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", mysqlContainer::getUsername);
+        registry.add("spring.datasource.password", mysqlContainer::getPassword);
+    }
+
     @Autowired private TodoService todoService;
+    @Autowired private TodoRepository todoRepository;
+
+    private Long todo1Id;
+    private Long todo2Id;
 
     @BeforeEach
     void setUp() {
-        todoService = new TodoService(new TodoInMemoryRepository());
-        todoService.save(new Todo(null, "Test Todo 1", "Description 1", false));
-        todoService.save(new Todo(null, "Test Todo 2", "Description 2", true));
+        todoRepository.deleteAll();
+        todoService = new TodoService(todoRepository);
+        todo1Id = todoService.save(new TodoRequestDto("Test Todo 1", "Description 1")).getId();
+        todo2Id = todoService.save(new TodoRequestDto("Test Todo 2", "Description 2")).getId();
     }
 
     @Test
     void testFindAll() {
-        List<Todo> todos = todoService.findAll();
+        List<TodoResponseDto> todos = todoService.findAll();
         assertThat(todos).hasSize(2);
     }
 
     @Test
     void testSaveTodo() {
-        Todo todo = new Todo(null, "New todo", "New Description", false);
-        todoService.save(todo);
+        TodoRequestDto todoRequestDto = new TodoRequestDto("New todo", "New Description");
+        todoService.save(todoRequestDto);
         assertThat(todoService.findAll()).hasSize(3);
     }
 
     @Test
     void testFindById() {
-        Todo todo = todoService.findById(1L);
+        TodoResponseDto todo = todoService.findById(1L);
         assertThat(todo).isNotNull();
         assertThat(todo.getTitle()).isEqualTo("Test Todo 1");
     }
 
     @Test
     void testUpdateTodo() {
-        Todo updatedTodo =
-                new Todo(1L, "Updated Todo", "Updated Descripton", true);
-        todoService.update(1L, updatedTodo);
-        Todo todo = todoService.findById(1L);
+        TodoRequestDto updatedTodo =
+                new TodoRequestDto("Updated Todo", "Updated Descripton", true);
+        todoService.update(todo1Id, updatedTodo);
+        TodoResponseDto todo = todoService.findById(todo1Id);
         assertThat(todo.getTitle()).isEqualTo("Updated Todo");
         assertThat(todo.getDescription()).isEqualTo("Updated Description");
         assertThat(todo.isCompleted()).isTrue();
@@ -55,9 +85,9 @@ public class TodoServiceTests {
 
     @Test
     void testDeleteTodo() {
-        todoService.findById(1L);
+        todoService.findById(todo1Id);
         assertThat(todoService.findAll()).hasSize(1);
-        assertThat(todoService.findById(1L)).isNull();
+        assertThat(todoService.findById(todo1Id)).isNull();
     }
 }
 

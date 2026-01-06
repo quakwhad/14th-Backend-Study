@@ -1,4 +1,4 @@
-package com.example.jongbum.model;
+package com.example.jongbum.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,8 +8,8 @@ import lombok.NonNull;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Todo {
-    private Long id;
+public class TodoResponseDto {
+    @NonNull private Long id;
     @NonNull private String title;
     private String description;
     private boolean completed;

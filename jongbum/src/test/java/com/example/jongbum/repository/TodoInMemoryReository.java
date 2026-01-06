@@ -1,7 +1,7 @@
 package com.example.jongbum.repository;
 
 import com.example.jongbum.controller.TodoController;
-import com.example.jongbum.model.Todo;
+import com.example.jongbum.entity.Todo;
 import com.example.jongbum.service.TodoService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
